@@ -1,35 +1,48 @@
-variable "docker_image_name" {
-  description = "Nom de l'image Docker"
-  type        = string
-  default     = "nginx:latest"
-}
+variable "machines" {
+  description = "Liste des machines à créer avec leurs paramètres"
+  type = list(object({
+    name      = string
+    vcpu      = number
+    disk_size = number
+    region    = string
+  }))
 
-variable "container_name" {
-  description = "Nom du conteneur Docker"
-  type        = string
-  default     = "nginx-terraform"
-}
+  # Condition relative au CPU
+  validation {
+    condition = alltrue([
+      for machine in var.machines : machine.vcpu >= 2 && machine.vcpu <= 64
+    ])
+    error_message = "vCPU (min. 2, max. 64)"
+  }
 
-variable "internal_port" {
-  description = "Port interne du conteneur"
-  type        = number
-  default     = 80
-}
+  # Condition relative à la taille du disque
+  validation {
+    condition = alltrue([
+      for machine in var.machines : machine.disk_size >= 20
+    ])
+    error_message = "disque (en Go, min. 20)"
+  }
 
-variable "external_port" {
-  description = "Port externe exposé"
-  type        = number
-  default     = 8080
-}
+  # Confition pour valider la région
+  validation {
+    condition = alltrue([
+      for machine in var.machines : contains(["eu-west-1", "us-east-1", "ap-southeast-1"], machine.region)
+    ])
+    error_message = "La région doit être l'une des suivantes : eu-west-1, us-east-1, ap-southeast-1."
+  }
 
-variable "client_count" {
-  description = "Nombre de conteneurs client à déployer"
-  type        = number
-  default     = 3
-}
-
-variable "client_names" {
-  description = "Liste des noms personnalisés pour les conteneurs client"
-  type        = list(string)
-  default     = ["A", "B", "C"]
+  default = [
+    {
+      name      = "machine1"
+      vcpu      = 4
+      disk_size = 50
+      region    = "eu-west-1"
+    },
+    {
+      name      = "machine2"
+      vcpu      = 8
+      disk_size = 100
+      region    = "us-east-1"
+    }
+  ]
 }

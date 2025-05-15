@@ -1,78 +1,27 @@
+# Déclaration du provider null (aucun cloud)
 terraform {
-  #Provider Docker
   required_providers {
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = "3.5.0"
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.0"
     }
   }
 }
 
-provider "docker" {
-  host = "tcp://localhost:2375"
-}
+# Simule le déploiement de machines virtuelles
+resource "null_resource" "vm" {
+  for_each = { for machine in var.machines : machine.name => machine }
 
-# Réseau Docker partagé
-resource "docker_network" "my_network" {
-  name = "nginx_network"
-}
-
-# Image Nginx
-resource "docker_image" "nginx" {
-  name         = var.docker_image_name
-  keep_locally = true
-}
-
-# Conteneur Nginx
-resource "docker_container" "nginx" {
-  name  = var.container_name
-  image = docker_image.nginx.image_id
-
-  ports {
-    internal = var.internal_port
-    external = var.external_port
-  }
-
-  networks_advanced {
-    name = docker_network.my_network.name
-  }
-}
-
-resource "docker_container" "client" {
-  for_each = toset(var.client_names)
-
-  name  = "server-${each.key}"                  
-  image = "appropriate/curl"
-
-  networks_advanced {
-    name = docker_network.my_network.name
-  }
-
-  command = [
-    "sh", "-c",
-    "curl http://nginx:80 && echo ' ${each.key} OK' && sleep 30"
-  ]
-
-  depends_on = [docker_container.nginx]
-}
-
-resource "null_resource" "nginx_test" {
-  depends_on = [docker_container.nginx]
-
+  # deploiement VMm avec commande locale
   provisioner "local-exec" {
-    command = <<EOT
-for /l %i in (1,1,10) do (
-  curl -s http://localhost:${var.external_port} | findstr "Welcome" >nul
-  if not errorlevel 1 (
-    echo Test OK : Welcome found in Nginx page
-    exit /b 0
-  )
-  timeout /t 1 >nul
-)
-echo Test failed : Welcome not found after 10 seconds
-exit /b 1
-EOT
+    command = "echo 🔧 Création de la machine ${each.value.name} avec ${each.value.vcpu} vCPU, ${each.value.disk_size} Go, en région ${each.value.region}"
   }
 }
 
-#Note : pour choisir un nombre : terraform apply -var="client_count=5"
+# output des machines crées
+output "machines_deployées" {
+  value = [
+    for vm in var.machines :
+    "✔️ ${vm.name} (${vm.region}) - ${vm.vcpu} vCPU, ${vm.disk_size} Go"
+  ]
+}
