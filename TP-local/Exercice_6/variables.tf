@@ -27,3 +27,9 @@ variable "client_count" {
   type        = number
   default     = 3
 }
+
+variable "client_names" {
+  description = "Liste des noms personnalisés pour les conteneurs client"
+  type        = list(string)
+  default     = ["A", "B", "C"]
+}

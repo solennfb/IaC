@@ -39,9 +39,9 @@ resource "docker_container" "nginx" {
 }
 
 resource "docker_container" "client" {
-  count = var.client_count
+  for_each = toset(var.client_names)
 
-  name  = "client-${count.index}"              # Noms uniques : client-0, client-1, ...
+  name  = "server-${each.key}"                  
   image = "appropriate/curl"
 
   networks_advanced {
@@ -50,12 +50,11 @@ resource "docker_container" "client" {
 
   command = [
     "sh", "-c",
-    "curl http://nginx:80 && echo ' Client ${count.index} OK' && sleep 30"
+    "curl http://nginx:80 && echo ' ${each.key} OK' && sleep 30"
   ]
 
   depends_on = [docker_container.nginx]
 }
-
 
 resource "null_resource" "nginx_test" {
   depends_on = [docker_container.nginx]
